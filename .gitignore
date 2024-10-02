@@ -32,4 +32,6 @@
 # Ignore master key for decrypting credentials and more.
 /config/master.key
 
+# Custom
 .docker.env
+trackitall_google_id_secret.json
