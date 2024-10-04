@@ -10,7 +10,7 @@ class UsersController < ApplicationController
         + "&redirect_uri=#{ENV["OAUTH_REDIRECT_URI"]}" \
         + "&response_type=code" \
         + "&state=#{SecureRandom.hex(16)}" \
-        + "&scope=profile"
+        + "&scope=email"
 
       render json: ApiResponse.payloadJSON({ auth_server_uri: auth_server_uri }), status: :ok
 
@@ -19,16 +19,109 @@ class UsersController < ApplicationController
     end
   end
 
-  def google_redirect_oauth2
-    puts params.inspect
-    # state
-    # code
-    # scope
-    # controller
-    # action
+  """
+  The endpoint for Google OAuth2 callback. it comes back
+  with state, code, scope, etc. in the query parameters.
+  `code` is authorization code that we want to be able to
+  get the access_token.
 
-    # TODO: exchange the code
-    redirect_to "#{ENV["FRONTEND_URI"]}?state=#{params["state"]}&code=#{params["code"]}", allow_other_host: true
+  after fetching `code` from query params, we send a POST
+  request to token endpoint of google API. If success, it
+  gives us back a json containing the access_token, along with
+  id_token which is a JWT of user information
+
+  We want to verify the signature of JWT. we get the modulus and exponent
+  from google/certs endpoint. 
+  1. From JWT header, we identify which key was used
+  2. Then we select the n and e of that key
+  3. We create a public key using the alg provided (RSA256)
+  4. Then using jwt library, we verify the signature and 
+  get user information from the payload
+
+  """
+  def google_redirect_oauth2
+    begin
+      tokenExchangeUri = URI(ENV["OAUTH_TOKEN_EXHANGE_URI"])
+      tokenExchangeUri.query = URI.encode_www_form({
+        code: params["code"],
+        client_id: ENV["OAUTH_CLIENT_ID"],
+        client_secret: ENV["OAUTH_CLIENT_SECRET"],
+        redirect_uri: ENV["OAUTH_REDIRECT_URI"],
+        grant_type: "authorization_code"
+      })
+
+      """
+      This response will have the schema below:
+        - access_token 
+        - expires_in  (seconds)
+        - scope
+        - token_type
+        - id_token
+      """
+      resp = Net::HTTP.start(tokenExchangeUri.host, tokenExchangeUri.port, use_ssl: (tokenExchangeUri.scheme == "https")) do |http|
+        req = Net::HTTP::Post.new(tokenExchangeUri.to_s)
+        req["Content-Type"] = "application/x-www-form-urlencoded"
+        http.request(req)
+      end
+      authBody = JSON.parse(resp.body)
+
+      certsUri = URI("https://www.googleapis.com/oauth2/v3/certs")
+      """
+      Response is a json with the name of 'keys'. Then keys value is an array of key objects
+      each key schema:
+        - n: modulus for RSA
+        - e: exponent for RSA
+        - kid
+        - alg
+        ...
+      """
+      certsResp = Net::HTTP.start(certsUri.host, certsUri.port, use_ssl: (certsUri.scheme == "https")) do | http |
+        req = Net::HTTP::Get.new(certsUri.to_s)
+        req["Content-Type"] = "application/json"
+        http.request(req)
+      end
+      certsBody = JSON.parse(certsResp.body)
+
+      # Decode without encryption to get the key from its header
+      userJWT = JWT.decode authBody["id_token"], nil, false
+      # userJWT.second is the Header segment
+      kid = userJWT.second["kid"]
+      key_data = certsBody["keys"].find { |key| key["kid"] == kid }
+
+      # Decoding into raw binary
+      modulus = Base64.urlsafe_decode64(key_data["n"])
+      exponent = Base64.urlsafe_decode64(key_data["e"])
+
+      # onstruct ASN.1 DER-encoded public key from n and e
+      asn1 = OpenSSL::ASN1::Sequence([
+        OpenSSL::ASN1::Integer.new(OpenSSL::BN.new(modulus, 2)),
+        OpenSSL::ASN1::Integer.new(OpenSSL::BN.new(exponent, 2))
+      ])
+      # Create the RSA public key using ASN.1 DER encoding
+      rsa_public = OpenSSL::PKey::RSA.new(asn1.to_der)
+
+      # Fetching email
+      decoded_token = JWT.decode(authBody["id_token"], rsa_public, true, { algorithm: 'RS256' })
+      email = decoded_token.first["email"]
+
+      # Either signup or login with the fetched email
+      user = User.find_by(email: email)
+      if user == nil
+        user = User.create!(email: email, password: BCrypt::Password.create(SecureRandom.hex(20)))
+      end
+
+      session = Session.create!(id: ULID.generate, user_id: user.id, issued_at: Time.new.to_i, expires_at: Time.new.to_i + 86400)
+      response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}; HttpOnly; SameSite=None; Secure; Expires=86400")
+      redirect_to "#{ENV["FRONTEND_URI"]}/profile", allow_other_host: true
+
+    rescue ActiveRecord::RecordInvalid => ri
+      puts "Invalid Record Error: #{ri.message}"
+      redirect_to "#{ENV["FRONTEND_URI"]}?oauth2_error=#{ri.message}", allow_other_host: true
+
+    rescue StandardError => e
+      puts "Standard Error: #{e.message}"
+      redirect_to "#{ENV["FRONTEND_URI"]}?oauth2_error=#{e.message}", allow_other_host: true
+    end
   end
 
   def signup
