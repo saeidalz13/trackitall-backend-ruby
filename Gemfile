@@ -40,7 +40,7 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
 end
 
-gem "ulid-rails"
+gem "ulid"
 gem "bcrypt"
 
 gem "dotenv-rails", groups: [ :development, :test ]

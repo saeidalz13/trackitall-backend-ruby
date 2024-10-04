@@ -7,6 +7,7 @@ Rails.application.routes.draw do
 
   post "/signup", to: "users#signup"
   post "/login", to: "users#login"
+  delete "/signout", to: "users#signout"
   delete "/users/:id", to: "users#destroy"
 
   get "/oauth2-auth-server-uri", to: "users#send_auth_server"

@@ -10,17 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_10_03_233458) do
+ActiveRecord::Schema[7.2].define(version: 2024_10_03_231132) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
-  create_table "sessions", id: :binary, force: :cascade do |t|
-    t.binary "user_id", null: false
+  create_table "sessions", id: { type: :string, limit: 26 }, force: :cascade do |t|
+    t.string "user_id", limit: 26, null: false
     t.integer "issued_at", null: false
     t.integer "expires_at", null: false
   end
 
-  create_table "users", id: :binary, force: :cascade do |t|
+  create_table "users", id: { type: :string, limit: 26 }, force: :cascade do |t|
     t.string "email", null: false
     t.string "password", null: false
     t.datetime "created_at", null: false
@@ -28,5 +28,5 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_03_233458) do
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
-  add_foreign_key "sessions", "users"
+  add_foreign_key "sessions", "users", on_delete: :cascade
 end

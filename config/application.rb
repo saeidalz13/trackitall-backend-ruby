@@ -5,6 +5,7 @@ require "bcrypt"
 require "json"
 require "uri"
 require "securerandom"
+require 'ulid'
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
