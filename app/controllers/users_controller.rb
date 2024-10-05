@@ -166,13 +166,11 @@ class UsersController < ApplicationController
 
   def login
     begin
-      Rails.logger.info "#{request.headers["Content-Type"]}"
-
       user_params = JSON.parse(request.body.read)
       user = User.find_by!(email: user_params["email"])
 
       if !BCrypt::Password.new(user.password).is_password?(user_params["password"])
-        render json: ApiResponse.errorJSON("Wrong password"), status: :unauthorized
+        render json: ApiResponse.errorJSON("Wrong username or password"), status: :unauthorized
         return
       end
 
@@ -189,7 +187,7 @@ class UsersController < ApplicationController
       render json: ApiResponse.errorJSON("Invalid JSON format"), status: :bad_request
 
     rescue ActiveRecord::RecordNotFound => rnf
-      render json: ApiResponse.errorJSON(rnf.message), status: :not_found
+      render json: ApiResponse.errorJSON("Wrong username or password"), status: :unauthorized
 
     rescue StandardError => e
       render json: ApiResponse.errorJSON(e.message), status: :service_unavailable
