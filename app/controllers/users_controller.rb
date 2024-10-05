@@ -116,7 +116,7 @@ class UsersController < ApplicationController
           raise StandardError.new("Failed to create cookie signature")
         end
   
-        response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Expires=86400")
+        response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Max-Age=86400")
       end
 
       redirect_to "#{ENV["FRONTEND_URI"]}/profile?auth=true", allow_other_host: true
@@ -145,7 +145,7 @@ class UsersController < ApplicationController
           raise StandardError.new("Failed to create cookie signature")
         end
   
-        response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Expires=86400")
+        response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Max-Age=86400")
         redirect_to "#{ENV["FRONTEND_URI"]}/profile?auth=true", allow_other_host: true
       end
 
@@ -182,7 +182,7 @@ class UsersController < ApplicationController
         raise StandardError.new("Failed to create cookie signature")
       end
 
-      response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Expires=86400")
+      response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Max-Age=86400")
       redirect_to "#{ENV["FRONTEND_URI"]}/profile?auth=true", allow_other_host: true
 
     rescue JSON::ParserError
@@ -199,14 +199,25 @@ class UsersController < ApplicationController
 
   def signout
     begin
-      session = Session.find_by!(id: cookies[:trackitall_session_id])
+      session_id = extract_session_id_from_cookie(cookies[:trackitall_session_id])
+      if session_id.nil? 
+        raise ActionController::BadRequest.new("Session ID is missing or invalid") 
+      end
+
+      session = Session.find_by!(id: session_id)
       session.destroy!
+
+      response.set_header("Set-Cookie", "trackitall_session_id=nil; HttpOnly; SameSite=None; Secure; Max-Age=-1")
       render status: :no_content
+
+    rescue ActionController::BadRequest => br
+      render status: :bad_request
 
     rescue ActiveRecord::RecordNotFound => rnf
       render json: ApiResponse.errorJSON(rnf.message), status: :not_found
 
     rescue StandardError => e
+      puts e.message
       render json: ApiResponse.errorJSON(e.message), status: :service_unavailable
     end
   end

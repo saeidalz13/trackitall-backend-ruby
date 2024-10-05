@@ -22,7 +22,9 @@ class ApplicationController < ActionController::API
       return nil
     end
 
-    session_id, cookie_signature = session_cookie.split('.', 2)
+    session_id, cookie_signature = session_cookie.strip.split('.', 2)
+    cookie_signature = cookie_signature.gsub(' ', '+')
+
     encKey = ActiveSupport::KeyGenerator.new(ENV["COOKIE_ENCRYPTION_SECRET"]).generate_key(ENV["COOKIE_ENCRYPTION_SALT"], 32)
     encryptor = ActiveSupport::MessageEncryptor.new(encKey)
 
@@ -39,8 +41,11 @@ class ApplicationController < ActionController::API
       return session_id
     
     rescue ActiveSupport::MessageEncryptor::InvalidMessage => e
-      puts e.message
+      puts "MessageEncryptor Invalid Message: #{e.message}"
       return nil
+
+    rescue StandardError => e
+      puts e.message
     end
   end
 
