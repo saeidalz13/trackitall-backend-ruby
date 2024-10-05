@@ -65,7 +65,7 @@ class UsersController < ApplicationController
       end
       authBody = JSON.parse(resp.body)
 
-      certsUri = URI("https://www.googleapis.com/oauth2/v3/certs")
+      certsUri = URI(ENV["OAUTH_CERTS_URI"])
       """
       Response is a json with the name of 'keys'. Then keys value is an array of key objects
       each key schema:
@@ -104,15 +104,22 @@ class UsersController < ApplicationController
       decoded_token = JWT.decode(authBody["id_token"], rsa_public, true, { algorithm: 'RS256' })
       email = decoded_token.first["email"]
 
-      # Either signup or login with the fetched email
-      user = User.find_by(email: email)
-      if user == nil
-        user = User.create!(email: email, password: BCrypt::Password.create(SecureRandom.hex(20)))
+      ActiveRecord::Base.transaction do
+        user = User.find_by(email: email)
+        if user == nil
+          user = User.create!(email: email, password: BCrypt::Password.create(SecureRandom.hex(20)))
+        end
+  
+        session = Session.create!(id: ULID.generate, user_id: user.id, issued_at: Time.new.to_i, expires_at: Time.new.to_i + 86400)
+        cookie_signature = create_cookie_signature(session.id)
+        if cookie_signature.nil?
+          raise StandardError.new("Failed to create cookie signature")
+        end
+  
+        response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Expires=86400")
       end
 
-      session = Session.create!(id: ULID.generate, user_id: user.id, issued_at: Time.new.to_i, expires_at: Time.new.to_i + 86400)
-      response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}; HttpOnly; SameSite=None; Secure; Expires=86400")
-      redirect_to "#{ENV["FRONTEND_URI"]}/profile", allow_other_host: true
+      redirect_to "#{ENV["FRONTEND_URI"]}/profile?auth=true", allow_other_host: true
 
     rescue ActiveRecord::RecordInvalid => ri
       puts "Invalid Record Error: #{ri.message}"
@@ -133,14 +140,14 @@ class UsersController < ApplicationController
         user = User.create!(id: ULID.generate, email: user_params["email"], password: BCrypt::Password.create(user_params["password"]))
         session = Session.create!(id: ULID.generate, user_id: user.id, issued_at: Time.new.to_i, expires_at: Time.new.to_i + 86400)
         
-        response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}; HttpOnly; SameSite=None; Secure; Expires=86400")
-
-        render json: ApiResponse.payloadJSON({ user_id: user.id, email: user.email }), status: :created
+        cookie_signature = create_cookie_signature(session.id)
+        if cookie_signature.nil?
+          raise StandardError.new("Failed to create cookie signature")
+        end
+  
+        response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Expires=86400")
+        redirect_to "#{ENV["FRONTEND_URI"]}/profile?auth=true", allow_other_host: true
       end
-
-      # TODO: cryptographically signing the cookie
-      # 1. hash the cookie
-      # 2. sign the cookie with a secret (symmetric)
 
     rescue JSON::ParserError => pe
       puts pe.message
@@ -170,9 +177,13 @@ class UsersController < ApplicationController
       end
 
       session = Session.create!(id: ULID.generate, user_id: user.id, issued_at: Time.new.to_i, expires_at: Time.new.to_i + 86400)
-      response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}; HttpOnly; SameSite=None; Secure; Expires=86400")
+      cookie_signature = create_cookie_signature(session.id)
+      if cookie_signature.nil?
+        raise StandardError.new("Failed to create cookie signature")
+      end
 
-      render json: ApiResponse.payloadJSON({ id: user.id }), status: :ok
+      response.set_header("Set-Cookie", "trackitall_session_id=#{session.id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Expires=86400")
+      redirect_to "#{ENV["FRONTEND_URI"]}/profile?auth=true", allow_other_host: true
 
     rescue JSON::ParserError
       render json: ApiResponse.errorJSON("Invalid JSON format"), status: :bad_request
@@ -191,6 +202,9 @@ class UsersController < ApplicationController
       session = Session.find_by!(id: cookies[:trackitall_session_id])
       session.destroy!
       render status: :no_content
+
+    rescue ActiveRecord::RecordNotFound => rnf
+      render json: ApiResponse.errorJSON(rnf.message), status: :not_found
 
     rescue StandardError => e
       render json: ApiResponse.errorJSON(e.message), status: :service_unavailable
