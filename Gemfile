@@ -50,3 +50,4 @@ gem "json"
 gem "uri"
 gem "securerandom"
 gem "jwt"
+gem 'solargraph', group: :development

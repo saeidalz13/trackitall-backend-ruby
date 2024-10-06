@@ -6,7 +6,7 @@ class CreateSessions < ActiveRecord::Migration[7.2]
       t.string :user_id, limit: 26, null: false
       t.integer :issued_at, null: false
       t.integer :expires_at, null: false
-      
+
       t.foreign_key :users, column: :user_id, on_delete: :cascade
     end
   end

@@ -10,9 +10,25 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_10_03_231132) do
+ActiveRecord::Schema[7.2].define(version: 2024_10_05_052547) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "jobs", id: false, force: :cascade do |t|
+    t.string "user_id", limit: 26, null: false
+    t.string "position", limit: 50, null: false
+    t.string "company_name", limit: 50, null: false
+    t.datetime "applied_date", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.string "link", limit: 500
+    t.string "description", limit: 15000
+    t.string "ai_insight", limit: 10000
+    t.string "resume_path", limit: 1000
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_name"], name: "index_jobs_on_company_name"
+    t.index ["position"], name: "index_jobs_on_position"
+    t.index ["user_id"], name: "index_jobs_on_user_id"
+  end
 
   create_table "sessions", id: { type: :string, limit: 26 }, force: :cascade do |t|
     t.string "user_id", limit: 26, null: false
@@ -28,5 +44,6 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_03_231132) do
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
+  add_foreign_key "jobs", "users", on_delete: :cascade
   add_foreign_key "sessions", "users", on_delete: :cascade
 end
