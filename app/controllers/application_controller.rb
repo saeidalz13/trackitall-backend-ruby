@@ -12,21 +12,21 @@ class ApplicationController < ActionController::API
       nil
     end
 
-    if get_valid_session(session_id).nil?
-      render status: :unauthorized
-      nil
-    end
+    return unless get_valid_session(session_id).nil?
+
+    render status: :unauthorized
+    nil
   end
 
   def extract_session_id_from_cookie(session_cookie)
-    unless session_cookie
-      return nil
-    end
+    return nil unless session_cookie
 
-    session_id, cookie_signature = session_cookie.strip.split(".", 2)
-    cookie_signature = cookie_signature.gsub(" ", "+")
+    session_id, cookie_signature = session_cookie.strip.split('.', 2)
+    cookie_signature = cookie_signature.gsub(' ', '+')
 
-    encKey = ActiveSupport::KeyGenerator.new(ENV["COOKIE_ENCRYPTION_SECRET"]).generate_key(ENV["COOKIE_ENCRYPTION_SALT"], 32)
+    encKey = ActiveSupport::KeyGenerator.new(ENV['COOKIE_ENCRYPTION_SECRET']).generate_key(
+      ENV['COOKIE_ENCRYPTION_SALT'], 32
+    )
     encryptor = ActiveSupport::MessageEncryptor.new(encKey)
 
     begin
@@ -35,16 +35,14 @@ class ApplicationController < ActionController::API
 
       # Verify the integrity of the session_id by comparing hashes
       if decrypted_hashed_session_id != expected_hashed_session_id
-        puts "Session has been tampered with!"
+        puts 'Session has been tampered with!'
         return nil
       end
 
       session_id
-
     rescue ActiveSupport::MessageEncryptor::InvalidMessage => e
       puts "MessageEncryptor Invalid Message: #{e.message}"
       nil
-
     rescue StandardError => e
       puts e.message
     end
@@ -52,9 +50,7 @@ class ApplicationController < ActionController::API
 
   def get_valid_session(session_id)
     session = Session.find(session_id)
-    if session.nil?
-      return nil
-    end
+    return nil if session.nil?
 
     if session.expires_at < Time.new.to_i
       session.destroy
@@ -66,14 +62,10 @@ class ApplicationController < ActionController::API
 
   def get_user_id_from_cookie(session_cookie)
     session_id = extract_session_id_from_cookie(session_cookie)
-    if session_id.nil?
-      return nil
-    end
+    return nil if session_id.nil?
 
     valid_session = get_valid_session(session_id)
-    if valid_session.nil?
-      return nil
-    end
+    return nil if valid_session.nil?
 
     valid_session.user_id
   end
@@ -81,19 +73,21 @@ class ApplicationController < ActionController::API
   # Create a digital signature cookie to add a layer
   # of security. It's then attached to the cookie
   def create_cookie_signature(cookie_value)
-    begin
-      hashed_cookie_value = Digest::SHA256.hexdigest(cookie_value)
-      encKey = ActiveSupport::KeyGenerator.new(ENV["COOKIE_ENCRYPTION_SECRET"]).generate_key(ENV["COOKIE_ENCRYPTION_SALT"], 32)
-      encryptor = ActiveSupport::MessageEncryptor.new(encKey)
-      encryptor.encrypt_and_sign(hashed_cookie_value)
+    hashed_cookie_value = Digest::SHA256.hexdigest(cookie_value)
+    enc_key = ActiveSupport::KeyGenerator.new(ENV['COOKIE_ENCRYPTION_SECRET']).generate_key(
+      ENV['COOKIE_ENCRYPTION_SALT'], 32
+    )
+    encryptor = ActiveSupport::MessageEncryptor.new(enc_key)
+    encryptor.encrypt_and_sign(hashed_cookie_value)
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage => e
+    puts e.message
+    nil
+  rescue StandardError => e
+    puts e.message
+    nil
+  end
 
-    rescue ActiveSupport::MessageEncryptor::InvalidMessage => e
-      puts e.message
-      nil
-
-    rescue StandardError => e
-      puts e.message
-      nil
-    end
+  def generate_session_id_cookie(session_id, cookie_signature)
+    "trackitall_session_id=#{session_id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Max-Age=86400"
   end
 end

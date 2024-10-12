@@ -1,15 +1,15 @@
-require_relative "boot"
+require_relative 'boot'
 
-require "rails/all"
-require "bcrypt"
-require "json"
-require "uri"
-require "securerandom"
+require 'rails/all'
+require 'bcrypt'
+require 'json'
+require 'uri'
+require 'securerandom'
 require 'ulid'
-require "net/http"
-require "jwt"
-require "openssl"
-require "digest"
+require 'net/http'
+require 'jwt'
+require 'openssl'
+require 'digest'
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
