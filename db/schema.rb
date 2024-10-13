@@ -15,8 +15,10 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_12_194029) do
   enable_extension "plpgsql"
 
   create_table "interview_questions", force: :cascade do |t|
+    t.string "user_id", limit: 26, null: false
+    t.string "job_id", limit: 26, null: false
     t.string "question", null: false
-    t.string "user_id", null: false
+    t.text "response"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["user_id", "question"], name: "index_interview_questions_on_user_id_and_question", unique: true
@@ -52,6 +54,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_12_194029) do
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
+  add_foreign_key "interview_questions", "jobs", on_delete: :cascade
   add_foreign_key "interview_questions", "users", on_delete: :cascade
   add_foreign_key "jobs", "users", on_delete: :cascade
   add_foreign_key "sessions", "users", on_delete: :cascade

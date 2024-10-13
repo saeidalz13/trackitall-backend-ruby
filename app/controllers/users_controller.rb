@@ -149,7 +149,7 @@ class UsersController < ApplicationController
 
   def login
     user_params = JSON.parse(request.body.read)
-    user = User.find_by!(email: user_params['email'])
+    user = User.find_by!(user_params['email'])
 
     unless BCrypt::Password.new(user.password).is_password?(user_params['password'])
       render json: ApiResponseGenerator.error_json('Wrong username or password'), status: :unauthorized
@@ -181,6 +181,7 @@ class UsersController < ApplicationController
     response.set_header('Set-Cookie', 'trackitall_session_id=nil; HttpOnly; SameSite=None; Secure; Max-Age=-1')
     render status: :no_content
   rescue ActionController::BadRequest => e
+    Rails.logger.error(e.message)
     render status: :bad_request
   rescue ActiveRecord::RecordNotFound => e
     render json: ApiResponseGenerator.error_json(e.message), status: :not_found
@@ -199,5 +200,21 @@ class UsersController < ApplicationController
     render json: ApiResponseGenerator.error_json(e.message), status: :bad_request
   rescue StandardError => e
     render json: ApiResponseGenerator.error_json(e.message), status: :service_unavailable
+  end
+
+  def is_session_valid
+    user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
+    if user_id.nil?
+      render status: :unauthorized
+      return
+    end
+
+    # user = User.find(user_id)
+    # if user.nil?
+    #   render status: :unauthorized
+    #   return
+    # end
+    # json: ApiResponseGenerator.payload_json({ user_id:, email: user.email }),
+    render status: :ok
   end
 end

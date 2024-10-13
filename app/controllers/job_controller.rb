@@ -51,7 +51,7 @@ class JobController < ApplicationController
       return
     end
 
-    begin
+    ActiveRecord::Base.transaction do
       created_job = Job.create!(
         id: ULID.generate,
         user_id:,
@@ -63,6 +63,9 @@ class JobController < ApplicationController
         ai_insight: nil,
         resume_path: nil
       )
+
+      InterviewQuestion.add_default_questions(user_id, created_job.id)
+
       render json: ApiResponseGenerator.payload_json(
         {
           id: created_job.id,
