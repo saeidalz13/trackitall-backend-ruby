@@ -21,7 +21,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_12_194029) do
     t.text "response"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["user_id", "question"], name: "index_interview_questions_on_user_id_and_question", unique: true
+    t.index ["user_id", "job_id", "question"], name: "index_interview_questions_on_user_id_and_job_id_and_question", unique: true
   end
 
   create_table "jobs", id: { type: :string, limit: 26 }, force: :cascade do |t|

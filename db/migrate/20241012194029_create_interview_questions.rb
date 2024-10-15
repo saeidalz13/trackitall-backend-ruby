@@ -10,6 +10,6 @@ class CreateInterviewQuestions < ActiveRecord::Migration[7.2]
       t.foreign_key :users, column: :user_id, on_delete: :cascade
       t.foreign_key :jobs, column: :job_id, on_delete: :cascade
     end
-    add_index :interview_questions, %i[user_id question], unique: true
+    add_index :interview_questions, %i[user_id job_id question], unique: true
   end
 end

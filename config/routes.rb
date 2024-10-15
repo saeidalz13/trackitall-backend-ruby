@@ -19,9 +19,13 @@ Rails.application.routes.draw do
   get '/jobs/:id', to: 'job#show'
   post '/jobs', to: 'job#new'
   delete '/jobs/:id', to: 'job#destroy'
+  patch '/jobs/:id', to: 'job#update'
 
   # Interview
   get '/interview-questions', to: 'interview_question#show'
+
+  # AI
+  get '/ai/job-insight', to: 'ai#get_ai_insight'
 
   # Root
   root to: 'main#index'

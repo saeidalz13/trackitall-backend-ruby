@@ -1,5 +1,5 @@
 class JobController < ApplicationController
-  before_action :check_session_cookie, only: %i[destroy update]
+  # before_action :check_session_cookie, only: %i[update]
 
   def index
     user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
@@ -59,12 +59,15 @@ class JobController < ApplicationController
         company_name: job['company_name'],
         applied_date: job['applied_date'],
         link: job['link'],
-        description: ['description'],
+        description: job['description'],
         ai_insight: nil,
         resume_path: nil
       )
+      puts created_job.inspect
 
-      InterviewQuestion.add_default_questions(user_id, created_job.id)
+      unless InterviewQuestion.add_default_questions(user_id, created_job.id)
+        raise ActiveRecord::Rollback, 'Failed to add questions'
+      end
 
       render json: ApiResponseGenerator.payload_json(
         {
@@ -72,28 +75,57 @@ class JobController < ApplicationController
           applied_date: created_job.applied_date
         }
       ), status: :created
-    rescue ActiveRecord::RecordInvalid => e
-      Rails.logger.error(e.message)
-      render json: ApiResponseGenerator.error_json(e.message), status: :bad_request
-    rescue StandardError => e
-      Rails.logger.error(e.message)
-      render json: ApiResponseGenerator.error_json(e.message), status: :service_unavailable
     end
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error(e.message)
+    render json: ApiResponseGenerator.error_json(e.message), status: :bad_request
+  rescue StandardError => e
+    Rails.logger.error(e.message)
+    render json: ApiResponseGenerator.error_json(e.message), status: :service_unavailable
   end
 
   def update
-    # job = Job.find_by!(id: params[:job_ulid])
+    user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
+    if user_id.nil?
+      render status: :unauthorized
+      return
+    end
+
+    job = Job.where('id = ? AND user_id = ?', params[:id], user_id).first
+    if job.nil?
+      render status: :not_found
+      return
+    end
+
+    req_body = JSON.parse(request.body.read)
+    job.update!(req_body)
+
     render status: :ok
+  rescue JSON::ParserError => e
+    puts e.message
+    render json: ApiResponseGenerator.error_json('Invalid JSON format'), status: :bad_request
+  rescue ActiveRecord::RecordInvalid => e
+    puts e.message
+    render status: :bad_request
   rescue ActiveRecord::RecordNotFound => e
     render json: ApiResponseGenerator.error_json(e.message), status: :not_found
   end
 
   def destroy
-    job = Job.find_by!(id: params[:id])
+    user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
+    if user_id.nil?
+      render status: :unauthorized
+      return
+    end
+
+    job = Job.where('id = ? AND user_id = ?', params[:id], user_id).first
+    if job.nil?
+      render status: :not_found
+      return
+    end
+
     job.destroy!
     render status: :no_content
-  rescue ActiveRecord::RecordNotFound => e
-    render json: ApiResponseGenerator.error_json(e.message), status: :not_found
   rescue ActiveRecord::RecordNotDestroyed => e
     render json: ApiResponseGenerator.error_json(e.message), status: :bad_request
   rescue StandardError => e

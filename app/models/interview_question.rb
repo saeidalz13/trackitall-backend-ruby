@@ -20,9 +20,13 @@ class InterviewQuestion < ApplicationRecord
   belongs_to :user
   belongs_to :job
 
-  validates :question, presence: true, uniqueness: true
+  validates :question, presence: true
 
   def self.add_default_questions(user_id, job_id)
     DEFAULT_QUESTIONS.map { |question| create!(question:, user_id:, job_id:) }
+    true
+  rescue StandardError => e
+    Rails.logger.error("Failed to add questions: #{e.message}")
+    false
   end
 end
