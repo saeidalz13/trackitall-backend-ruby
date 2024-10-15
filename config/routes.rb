@@ -23,6 +23,7 @@ Rails.application.routes.draw do
 
   # Interview
   get '/interview-questions', to: 'interview_question#show'
+  patch '/interview-questions/:id', to: 'interview_question#update'
 
   # AI
   get '/ai/job-insight', to: 'ai#get_ai_insight'

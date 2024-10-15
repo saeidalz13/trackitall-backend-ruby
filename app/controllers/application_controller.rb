@@ -24,10 +24,10 @@ class ApplicationController < ActionController::API
     session_id, cookie_signature = session_cookie.strip.split('.', 2)
     cookie_signature = cookie_signature.gsub(' ', '+')
 
-    encKey = ActiveSupport::KeyGenerator.new(ENV['COOKIE_ENCRYPTION_SECRET']).generate_key(
+    enc_key = ActiveSupport::KeyGenerator.new(ENV['COOKIE_ENCRYPTION_SECRET']).generate_key(
       ENV['COOKIE_ENCRYPTION_SALT'], 32
     )
-    encryptor = ActiveSupport::MessageEncryptor.new(encKey)
+    encryptor = ActiveSupport::MessageEncryptor.new(enc_key)
 
     begin
       decrypted_hashed_session_id = encryptor.decrypt_and_verify(cookie_signature)
