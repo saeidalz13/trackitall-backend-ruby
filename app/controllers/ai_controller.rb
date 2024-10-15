@@ -55,25 +55,34 @@ class AiController < ApplicationController
           chunk.split("\n").each do |line|
             next if line.strip.empty?
 
-            line = line.gsub('data: ', '')
-            line = line.strip
+            line = line.gsub('data: ', '').strip
+
             # Specified by OpenAI docs
             # https://platform.openai.com/docs/api-reference/chat/create
-            break if line == '[DONE]'
 
-            data = JSON.parse(line)
-            content = data['choices'][0]['delta']['content']
+            begin
+              if line == '[DONE]'
+                sse.write(line, event: 'message')
+                break
+              end
 
-            sse.write(content, event: 'message')
+              data = JSON.parse(line)
+              content = data['choices'][0]['delta']['content']
+              next if content.nil?
+
+              sse.write(content, event: 'message')
+            rescue JSON::ParserError => e
+              puts e.message
+              next
+            end
           end
         end
       end
     end
-
-    sse.close
   rescue StandardError => e
     Rails.logger.error(e.message)
     sse.write({ error: 'Unknown error server' }, event: 'error')
+  ensure
     sse.close
   end
 
