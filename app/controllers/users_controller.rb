@@ -101,6 +101,8 @@ class UsersController < ApplicationController
       user = User.find_by(email:)
       user = User.create!(email:, password: BCrypt::Password.create(SecureRandom.hex(20))) if user.nil?
 
+      Session.where(user_id: user.id).delete_all
+
       session = Session.create!(id: ULID.generate, user_id: user.id, issued_at: Time.new.to_i,
                                 expires_at: Time.new.to_i + 86_400)
       cookie_signature = create_cookie_signature(session.id)
@@ -125,6 +127,8 @@ class UsersController < ApplicationController
     ActiveRecord::Base.transaction do
       user = User.create!(id: ULID.generate, email: user_params['email'],
                           password: BCrypt::Password.create(user_params['password']))
+
+      Session.where(user_id: user.id).delete_all
       session = Session.create!(id: ULID.generate, user_id: user.id, issued_at: Time.new.to_i,
                                 expires_at: Time.new.to_i + 86_400)
 
@@ -156,6 +160,7 @@ class UsersController < ApplicationController
       return
     end
 
+    Session.where(user_id: user.id).delete_all
     session = Session.create!(id: ULID.generate, user_id: user.id, issued_at: Time.new.to_i,
                               expires_at: Time.new.to_i + 86_400)
     cookie_signature = create_cookie_signature(session.id)
@@ -175,8 +180,7 @@ class UsersController < ApplicationController
     session_id = extract_session_id_from_cookie(cookies[:trackitall_session_id])
     raise ActionController::BadRequest, 'Session ID is missing or invalid' if session_id.nil?
 
-    session = Session.find_by!(id: session_id)
-    session.destroy!
+    Session.find(session_id).destroy!
 
     response.set_header('Set-Cookie', 'trackitall_session_id=nil; HttpOnly; SameSite=None; Secure; Max-Age=-1')
     render status: :no_content
@@ -202,19 +206,10 @@ class UsersController < ApplicationController
     render json: ApiResponseGenerator.error_json(e.message), status: :service_unavailable
   end
 
-  def is_session_valid
+  def session_valid?
     user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
-    if user_id.nil?
-      render status: :unauthorized
-      return
-    end
+    return render status: :unauthorized if user_id.nil?
 
-    # user = User.find(user_id)
-    # if user.nil?
-    #   render status: :unauthorized
-    #   return
-    # end
-    # json: ApiResponseGenerator.payload_json({ user_id:, email: user.email }),
     render status: :ok
   end
 end

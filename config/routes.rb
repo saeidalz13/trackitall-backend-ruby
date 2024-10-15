@@ -12,7 +12,7 @@ Rails.application.routes.draw do
   delete '/users/:id', to: 'users#destroy'
   get '/oauth2-auth-server-uri', to: 'users#send_auth_server'
   get "/#{ENV['OAUTH_REDIRECT_ROUTE']}", to: 'users#google_redirect_oauth2'
-  get 'is-session-valid', to: 'users#is_session_valid'
+  get 'is-session-valid', to: 'users#session_valid?'
 
   # Jobs
   get '/jobs', to: 'job#index'
