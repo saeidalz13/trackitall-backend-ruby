@@ -57,10 +57,9 @@ class AiController < ApplicationController
 
             line = line.gsub('data: ', '').strip
 
-            # Specified by OpenAI docs
-            # https://platform.openai.com/docs/api-reference/chat/create
-
             begin
+              # Specified by OpenAI docs
+              # https://platform.openai.com/docs/api-reference/chat/create
               if line == '[DONE]'
                 sse.write(line, event: 'message')
                 break
