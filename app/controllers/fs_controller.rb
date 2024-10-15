@@ -5,10 +5,7 @@ class FsController < ApplicationController
 
     job_ulid = params[:job_ulid]
     job = Job.find(job_ulid)
-    if job.nil?
-      render status: :not_found
-      return
-    end
+    return render status: :not_found if job.nil?
 
     file = params[:file]
     return render status: :bad_request unless file.present?
@@ -31,6 +28,24 @@ class FsController < ApplicationController
     Rails.logger.error e.message
     File.delete(file_path) if File.exist? file_path
     render status: :bad_request
+  rescue StandardError => e
+    Rails.logger.error e.message
+    render status: :service_unavailable
+  end
+
+  def show
+    user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
+    return render status: :unauthorized if user_id.nil?
+
+    job_ulid = params[:job_ulid]
+    job = Job.find(job_ulid)
+    return render status: :not_found if job.nil?
+
+    return render status: :not_found unless File.exist? job.resume_path
+
+    File.open(job.resume_path, 'rb') do |f|
+      send_data f.read, filename: File.basename(job.resume_path), type: 'application/pdf', disposition: 'attachment'
+    end
   rescue StandardError => e
     Rails.logger.error e.message
     render status: :service_unavailable

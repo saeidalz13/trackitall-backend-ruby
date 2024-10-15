@@ -29,6 +29,7 @@ Rails.application.routes.draw do
   get '/ai/job-insight', to: 'ai#get_ai_insight'
 
   # FileSystem
+  get '/fs/resume', to: 'fs#show'
   post '/fs/resume', to: 'fs#new'
 
   # Root
