@@ -50,4 +50,35 @@ class FsController < ApplicationController
     Rails.logger.error e.message
     render status: :service_unavailable
   end
+
+  def destroy
+    user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
+    return render status: :unauthorized if user_id.nil?
+
+    job_ulid = params[:job_ulid]
+    job = Job.find(job_ulid)
+    return render status: :not_found if job.nil?
+
+    return render status: :not_found unless File.exist? job.resume_path
+
+    ActiveRecord::Base.transaction do
+      # Store the path before setting it to nil.
+      path_to_delete = job.resume_path
+      job.update!({ resume_path: nil })
+
+      File.delete(path_to_delete)
+      raise ActiveRecord::Rollback, 'File deletion failed' if File.exist?(path_to_delete)
+
+      render status: :no_content
+    end
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error e.message
+    render status: :bad_request
+  rescue Errno::ENOENT
+    # File already deleted, no further action needed.
+    render status: :no_content
+  rescue StandardError => e
+    Rails.logger.error("Failed to delete file: #{e.message}")
+    render status: :service_unavailable
+  end
 end

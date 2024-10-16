@@ -31,6 +31,7 @@ Rails.application.routes.draw do
   # FileSystem
   get '/fs/resume', to: 'fs#show'
   post '/fs/resume', to: 'fs#new'
+  delete '/fs/resume', to: 'fs#destroy'
 
   # Root
   root to: 'main#index'
