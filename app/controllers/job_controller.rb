@@ -18,8 +18,21 @@ class JobController < ApplicationController
     end
 
     begin
-      jobs = Job.where(user_id:).limit(limit).offset(offset)
-      job_count = Job.where(user_id:).count
+      search_term = params[:search]
+      jobs = Job.where(user_id:)
+
+      if search_term.present?
+        jobs = jobs.where('position ILIKE ? OR company_name ILIKE ?', "%#{search_term}%", "%#{search_term}%")
+      end
+
+      jobs = jobs.limit(limit).offset(offset)
+
+      job_count = Job.where(user_id:)
+      if search_term.present?
+        job_count = job_count.where('position ILIKE ? OR company_name ILIKE ?', "%#{search_term}%",
+                                    "%#{search_term}%")
+      end
+      job_count = job_count.count
       render json: ApiResponseGenerator.payload_json({ jobs:, job_count: })
     rescue StandardError => e
       Rails.logger.error("Unexpected error in fetching jobs: #{e.message}")
