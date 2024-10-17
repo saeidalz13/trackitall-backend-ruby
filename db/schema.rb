@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_10_12_194029) do
+ActiveRecord::Schema[7.2].define(version: 2024_10_17_022852) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -35,6 +35,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_12_194029) do
     t.string "resume_path", limit: 1000
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "resume_content"
     t.index ["company_name"], name: "index_jobs_on_company_name"
     t.index ["position"], name: "index_jobs_on_position"
     t.index ["user_id"], name: "index_jobs_on_user_id"

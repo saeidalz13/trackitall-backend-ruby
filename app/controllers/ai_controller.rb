@@ -135,9 +135,9 @@ class AiController < ApplicationController
 
   def create_iq_response_content(job, question)
     <<~CONTENT
-      For this response, YOU MUST KEEP YOUR ANSWER UNDER 2000 CHARACTERS AND GIVE ME BULLET POINTS.
+      For this response, YOU MUST KEEP YOUR ANSWER BETWEEN 1500 to 2000 CHARACTERS AND GIVE ME BULLET POINTS.
       also, DO NOT INCLUDE MARKDOWN SYNTAX IN YOUR RESPONSE SUCH AS BOLDING, ITALIC, etc.
-      Based on the job information provided below, Please answer the following question:
+      Based on the job and information and my resume content (if not null/nil) provided below, Please answer the following question:
 
       Question:
       #{question}
@@ -150,6 +150,9 @@ class AiController < ApplicationController
 
       Job Description:
       #{job.description}
+
+      Resume Content:
+      #{job.resume_content}
     CONTENT
   end
 end

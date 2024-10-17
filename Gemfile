@@ -46,6 +46,7 @@ gem 'pg'
 
 gem 'json'
 gem 'jwt'
+gem 'pdf-reader'
 gem 'securerandom'
 gem 'uri'
 gem 'whenever', require: false
