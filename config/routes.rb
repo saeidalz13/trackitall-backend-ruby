@@ -28,11 +28,15 @@ Rails.application.routes.draw do
   # AI
   get '/ai/job-insight', to: 'ai#new_ai_insight'
   get '/ai/iq-response-suggestion', to: 'ai#new_interview_question_response_suggestion'
+  get '/ai/tech-questions', to: 'ai#new_technical_questions'
 
   # FileSystem
   get '/fs/resume', to: 'fs#show'
   post '/fs/resume', to: 'fs#new'
   delete '/fs/resume', to: 'fs#destroy'
+
+  # Technical Challenges
+  get '/technical-challenges', to: 'technical_challenge#index'
 
   # Root
   root to: 'main#index'

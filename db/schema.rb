@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_10_17_022852) do
+ActiveRecord::Schema[7.2].define(version: 2024_10_17_165119) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -47,6 +47,17 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_17_022852) do
     t.integer "expires_at", null: false
   end
 
+  create_table "technical_challenges", force: :cascade do |t|
+    t.string "user_id", limit: 26, null: false
+    t.string "job_id", limit: 26, null: false
+    t.string "question", limit: 5000, null: false
+    t.string "user_solution", limit: 50000
+    t.string "ai_solution", limit: 50000
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "job_id", "question"], name: "index_technical_challenges_on_user_id_and_job_id_and_question", unique: true
+  end
+
   create_table "users", id: { type: :string, limit: 26 }, force: :cascade do |t|
     t.string "email", null: false
     t.string "password", null: false
@@ -59,4 +70,6 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_17_022852) do
   add_foreign_key "interview_questions", "users", on_delete: :cascade
   add_foreign_key "jobs", "users", on_delete: :cascade
   add_foreign_key "sessions", "users", on_delete: :cascade
+  add_foreign_key "technical_challenges", "jobs", on_delete: :cascade
+  add_foreign_key "technical_challenges", "users", on_delete: :cascade
 end

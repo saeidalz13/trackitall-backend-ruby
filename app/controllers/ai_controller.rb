@@ -77,7 +77,7 @@ class AiController < ApplicationController
     return render status: :not_found if iq.nil?
 
     job = Job.find(iq.job_id)
-    return render status: :not_found if iq.nil?
+    return render status: :not_found if job.nil?
 
     req = prepare_ai_request(false, create_iq_response_content(job, iq.question))
 
@@ -93,6 +93,46 @@ class AiController < ApplicationController
     data = JSON.parse(resp.body)
 
     render json: ApiResponseGenerator.payload_json({ response: data['choices'][0]['message']['content'] }), status: :ok
+  rescue StandardError => e
+    Rails.logger.error e.message
+    render status: :service_unavailable
+  end
+
+  def new_technical_questions
+    user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
+    return render status: :unauthorized if user_id.nil?
+
+    job = Job.find(params[:job_id])
+    render status: :not_found if job.nil?
+
+    req = prepare_ai_request(false, create_technical_question_content(job))
+
+    resp = Net::HTTP.start(
+      OPENAI_CHAT_COMP_URI.host, OPENAI_CHAT_COMP_URI.port,
+      use_ssl: (OPENAI_CHAT_COMP_URI.scheme = 'https')
+    ) do |http|
+      http.request(req)
+    end
+
+    return render status: :service_unavailable unless resp.code == '200'
+
+    questions = extract_questions_from_tech_challenge_body(resp.body.strip)
+
+    questions.map do |question|
+      TechnicalChallenge.create!(user_id:, job_id: job.id, question: question['question'])
+    end
+
+    tech_challenges = TechnicalChallenge
+                      .where('user_id = ? AND job_id = ?', user_id, job.id)
+                      .select(:id, :question)
+
+    render json: ApiResponseGenerator.payload_json({ tech_challenges: }), status: :ok
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error e.message
+    render status: :service_unavailable
+  rescue ActiveRecord::RecordNotFound => e
+    Rails.logger.error e.message
+    render status: :not_found
   rescue StandardError => e
     Rails.logger.error e.message
     render status: :service_unavailable
@@ -120,6 +160,14 @@ class AiController < ApplicationController
     }.to_json
 
     req
+  end
+
+  def extract_questions_from_tech_challenge_body(body)
+    resp_body = JSON.parse(body)
+
+    questions = resp_body['choices'][0]['message']['content']
+    questions = questions.gsub('```json', '').gsub('`', '')
+    JSON.parse(questions)
   end
 
   def create_ai_insight_content(job)
@@ -153,6 +201,26 @@ class AiController < ApplicationController
 
       Resume Content:
       #{job.resume_content}
+    CONTENT
+  end
+
+  def create_technical_question_content(job)
+    <<~CONTENT
+      I'm trying to solve some technical challenges for my tech interview.
+      Based on the information below about the position and the company, give me 5 programming/coding/technical questions that would help me
+      better prepare for the technical stage.
+      DO NOT GIVE ME ANY EXTRA TEXT OR INSIGHT. JUST GIVE ME 5 RELEVANT TECHNICAL (programming/coding/technical) QUESTIONS IN A LIST MANNER.
+      SOMETHING TO CODE FOR. PROGRAMMING QUESTIONS!
+      YOUR RESPONSE MUST BE IN A JSON FORMAT SO I CAN DIRECTLY PARSE IT WITH MY APP.
+
+      Job Title:
+      #{job.position}
+
+      Company:
+      #{job.company_name}
+
+      Job Description:
+      #{job.description}
     CONTENT
   end
 end
