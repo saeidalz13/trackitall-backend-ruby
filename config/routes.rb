@@ -26,7 +26,8 @@ Rails.application.routes.draw do
   patch '/interview-questions/:id', to: 'interview_question#update'
 
   # AI
-  get '/ai/job-insight', to: 'ai#get_ai_insight'
+  get '/ai/job-insight', to: 'ai#new_ai_insight'
+  get '/ai/iq-response-suggestion', to: 'ai#new_interview_question_response_suggestion'
 
   # FileSystem
   get '/fs/resume', to: 'fs#show'

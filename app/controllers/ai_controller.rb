@@ -2,7 +2,7 @@ class AiController < ApplicationController
   include ActionController::Live
   OPENAI_CHAT_COMP_URI = URI('https://api.openai.com/v1/chat/completions')
 
-  def get_ai_insight
+  def new_ai_insight
     # SSE between client and server
     response.headers['Content-Type'] = 'text/event-stream'
     sse = SSE.new(response.stream, retry: 300, event: 'event-name')
@@ -31,23 +31,7 @@ class AiController < ApplicationController
       OPENAI_CHAT_COMP_URI.host, OPENAI_CHAT_COMP_URI.port,
       use_ssl: (OPENAI_CHAT_COMP_URI.scheme = 'https')
     ) do |http|
-      req = Net::HTTP::Post.new(OPENAI_CHAT_COMP_URI.to_s)
-
-      # SSE between server and Open AI
-      req['Content-Type'] = 'application/json'
-      req['Authorization'] = "Bearer #{ENV['OPENAI_KEY']}"
-      req['Accept'] = 'text/event-stream'
-
-      req.body = {
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: create_ai_insight_content(job)
-          }
-        ],
-        stream: true
-      }.to_json
+      req = prepare_ai_request(true, create_ai_insight_content(job))
 
       http.request(req) do |response|
         response.read_body do |chunk|
@@ -85,7 +69,58 @@ class AiController < ApplicationController
     sse.close
   end
 
+  def new_interview_question_response_suggestion
+    user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
+    return render status: :unauthorized if user_id.nil?
+
+    iq = InterviewQuestion.find_by(id: params[:iq_id])
+    return render status: :not_found if iq.nil?
+
+    job = Job.find(iq.job_id)
+    return render status: :not_found if iq.nil?
+
+    req = prepare_ai_request(false, create_iq_response_content(job, iq.question))
+
+    resp = Net::HTTP.start(
+      OPENAI_CHAT_COMP_URI.host, OPENAI_CHAT_COMP_URI.port,
+      use_ssl: (OPENAI_CHAT_COMP_URI.scheme = 'https')
+    ) do |http|
+      http.request(req)
+    end
+
+    return render status: :service_unavailable unless resp.code == '200'
+
+    data = JSON.parse(resp.body)
+
+    render json: ApiResponseGenerator.payload_json({ response: data['choices'][0]['message']['content'] }), status: :ok
+  rescue StandardError => e
+    Rails.logger.error e.message
+    render status: :service_unavailable
+  end
+
   protected
+
+  def prepare_ai_request(stream, content)
+    req = Net::HTTP::Post.new(OPENAI_CHAT_COMP_URI.to_s)
+
+    # SSE between server and Open AI
+    req['Content-Type'] = 'application/json'
+    req['Authorization'] = "Bearer #{ENV['OPENAI_KEY']}"
+    req['Accept'] = 'text/event-stream' if stream
+
+    req.body = {
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content:
+        }
+      ],
+      stream:
+    }.to_json
+
+    req
+  end
 
   def create_ai_insight_content(job)
     <<~CONTENT
@@ -94,6 +129,26 @@ class AiController < ApplicationController
       I have an interview with them for #{job.position} position.
       KEEP YOUR ANSWER LESS THAN 10000 characters please.
 
+      #{job.description}
+    CONTENT
+  end
+
+  def create_iq_response_content(job, question)
+    <<~CONTENT
+      For this response, YOU MUST KEEP YOUR ANSWER UNDER 2000 CHARACTERS AND GIVE ME BULLET POINTS.
+      also, DO NOT INCLUDE MARKDOWN SYNTAX IN YOUR RESPONSE SUCH AS BOLDING, ITALIC, etc.
+      Based on the job information provided below, Please answer the following question:
+
+      Question:
+      #{question}
+
+      Job Title:
+      #{job.position}
+
+      Company:
+      #{job.company_name}
+
+      Job Description:
       #{job.description}
     CONTENT
   end
