@@ -105,7 +105,10 @@ class AiController < ApplicationController
     job = Job.find(params[:job_id])
     render status: :not_found if job.nil?
 
-    req = prepare_ai_request(false, create_technical_question_content(job))
+    tag = params[:tag]
+    return render status: :bad_request unless %w[leetcode project].include? tag
+
+    req = prepare_ai_request(false, create_technical_question_content(job, tag))
 
     resp = Net::HTTP.start(
       OPENAI_CHAT_COMP_URI.host, OPENAI_CHAT_COMP_URI.port,
@@ -119,12 +122,12 @@ class AiController < ApplicationController
     questions = extract_questions_from_tech_challenge_body(resp.body.strip)
 
     questions.map do |question|
-      TechnicalChallenge.create!(user_id:, job_id: job.id, question: question['question'])
+      TechnicalChallenge.create!(user_id:, job_id: job.id, question: question['question'], tag: params[:tag])
     end
 
     tech_challenges = TechnicalChallenge
                       .where('user_id = ? AND job_id = ?', user_id, job.id)
-                      .select(:id, :question)
+                      .select(:id, :question, :tag)
 
     render json: ApiResponseGenerator.payload_json({ tech_challenges: }), status: :ok
   rescue ActiveRecord::RecordInvalid => e
@@ -204,14 +207,23 @@ class AiController < ApplicationController
     CONTENT
   end
 
-  def create_technical_question_content(job)
+  def create_technical_question_content(job, tag)
     <<~CONTENT
       I'm trying to solve some technical challenges for my tech interview.
-      Based on the information below about the position and the company, give me 5 programming/coding/technical questions that would help me
+      Based on the information below about the position and the company, give me 5 programming/coding/technical questions, that would help me
       better prepare for the technical stage.
       DO NOT GIVE ME ANY EXTRA TEXT OR INSIGHT. JUST GIVE ME 5 RELEVANT TECHNICAL (programming/coding/technical) QUESTIONS IN A LIST MANNER.
       SOMETHING TO CODE FOR. PROGRAMMING QUESTIONS!
       YOUR RESPONSE MUST BE IN A JSON FORMAT SO I CAN DIRECTLY PARSE IT WITH MY APP.
+
+      Conform to this json schema:
+      [
+        {
+          question: string
+        }
+      ]
+
+      Also, MAKE SURE YOU PROVIDE THE QUESTIONS IN #{tag} STYLE.
 
       Job Title:
       #{job.position}

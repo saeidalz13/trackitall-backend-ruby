@@ -10,7 +10,7 @@ class FsController < ApplicationController
     file = params[:file]
     return render status: :bad_request unless file.present?
 
-    resume_dir = File.join(ENV['FILE_STORAGE_PATH'], user_id)
+    resume_dir = File.join(ENV['FILE_STORAGE_PATH'], 'resume', user_id)
     Dir.mkdir resume_dir unless Dir.exist? resume_dir
 
     resume_path = File.join(resume_dir, "#{job_ulid}_#{file.original_filename}")

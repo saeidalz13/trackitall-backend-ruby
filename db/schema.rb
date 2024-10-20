@@ -51,11 +51,13 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_17_165119) do
     t.string "user_id", limit: 26, null: false
     t.string "job_id", limit: 26, null: false
     t.string "question", limit: 5000, null: false
+    t.string "tag", limit: 30, null: false
     t.string "user_solution", limit: 50000
     t.string "ai_solution", limit: 50000
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["user_id", "job_id", "question"], name: "index_technical_challenges_on_user_id_and_job_id_and_question", unique: true
+    t.check_constraint "tag::text = ANY (ARRAY['leetcode'::character varying, 'project'::character varying]::text[])"
   end
 
   create_table "users", id: { type: :string, limit: 26 }, force: :cascade do |t|

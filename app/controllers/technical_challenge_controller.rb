@@ -5,7 +5,8 @@ class TechnicalChallengeController < ApplicationController
 
     tech_challenges = TechnicalChallenge
                       .where('user_id = ? AND job_id = ?', user_id, params[:job_id])
-                      .select(:id, :question)
+                      .select(:id, :question, :tag)
+                      .order(:id)
     return render status: :not_found if tech_challenges.nil?
 
     render json: ApiResponseGenerator.payload_json({ tech_challenges: }), status: :ok
