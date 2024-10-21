@@ -29,6 +29,7 @@ Rails.application.routes.draw do
   get '/ai/job-insight', to: 'ai#new_ai_insight'
   get '/ai/iq-response-suggestion', to: 'ai#new_interview_question_response_suggestion'
   get '/ai/tech-questions', to: 'ai#new_technical_questions'
+  get '/ai/get-hint-tc', to: 'ai#new_tech_challenge_hint'
 
   # FileSystem
   get '/fs/resume', to: 'fs#show'

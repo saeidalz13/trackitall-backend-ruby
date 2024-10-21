@@ -141,6 +141,37 @@ class AiController < ApplicationController
     render status: :service_unavailable
   end
 
+  def new_tech_challenge_hint
+    user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
+    return render status: :unauthorized if user_id.nil?
+
+    tc = TechnicalChallenge.find(params[:tc_id])
+    render status: :not_found if tc.nil?
+
+    req = prepare_ai_request(false, create_tech_challenge_hint_content(tc))
+
+    resp = Net::HTTP.start(
+      OPENAI_CHAT_COMP_URI.host, OPENAI_CHAT_COMP_URI.port,
+      use_ssl: (OPENAI_CHAT_COMP_URI.scheme = 'https')
+    ) do |http|
+      http.request(req)
+    end
+
+    render status: :service_unavailable unless resp.code == '200'
+
+    data = JSON.parse(resp.body)
+    render json: ApiResponseGenerator.payload_json({ hint: data['choices'][0]['message']['content'] }), status: :ok
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error e.message
+    render status: :service_unavailable
+  rescue ActiveRecord::RecordNotFound => e
+    Rails.logger.error e.message
+    render status: :not_found
+  rescue StandardError => e
+    Rails.logger.error e.message
+    render status: :service_unavailable
+  end
+
   protected
 
   def prepare_ai_request(stream, content)
@@ -233,6 +264,17 @@ class AiController < ApplicationController
 
       Job Description:
       #{job.description}
+    CONTENT
+  end
+
+  def create_tech_challenge_hint_content(technicall_challenge)
+    <<~CONTENT
+      For the question below, please give me a hint how to solve this question.
+      BE MY MENTOR AND DO NOT JUST GIVE ME THE SOLUTION RIGHT AWAY. Guide me with an insightful hint.
+
+      KEEP YOUR ANSWER LESS THAN 10000 CHARACTERS.
+
+      #{technicall_challenge.question}
     CONTENT
   end
 end
