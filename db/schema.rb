@@ -52,6 +52,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_17_165119) do
     t.string "job_id", limit: 26, null: false
     t.string "question", limit: 5000, null: false
     t.string "tag", limit: 30, null: false
+    t.string "ai_hint", limit: 10000
     t.string "user_solution", limit: 50000
     t.string "ai_solution", limit: 50000
     t.datetime "created_at", null: false

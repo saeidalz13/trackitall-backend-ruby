@@ -38,6 +38,7 @@ Rails.application.routes.draw do
 
   # Technical Challenges
   get '/technical-challenges', to: 'technical_challenge#index'
+  get '/technical-challenges/:id', to: 'technical_challenge#show'
 
   # Root
   root to: 'main#index'

@@ -160,7 +160,11 @@ class AiController < ApplicationController
     render status: :service_unavailable unless resp.code == '200'
 
     data = JSON.parse(resp.body)
-    render json: ApiResponseGenerator.payload_json({ hint: data['choices'][0]['message']['content'] }), status: :ok
+    ai_hint = data['choices'][0]['message']['content']
+
+    tc.update!({ ai_hint: })
+
+    render json: ApiResponseGenerator.payload_json({ ai_hint: }), status: :ok
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error e.message
     render status: :service_unavailable

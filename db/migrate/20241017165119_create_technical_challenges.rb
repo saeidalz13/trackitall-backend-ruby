@@ -5,6 +5,7 @@ class CreateTechnicalChallenges < ActiveRecord::Migration[7.2]
       t.string :job_id, limit: 26, null: false
       t.string :question, limit: 5000, null: false
       t.string :tag, limit: 30, null: false
+      t.string :ai_hint, limit: 10_000
       t.string :user_solution, limit: 50_000
       t.string :ai_solution, limit: 50_000
       t.timestamps
