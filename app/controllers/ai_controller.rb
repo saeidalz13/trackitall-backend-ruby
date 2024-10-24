@@ -119,7 +119,7 @@ class AiController < ApplicationController
 
     return render status: :service_unavailable unless resp.code == '200'
 
-    questions = extract_questions_from_tech_challenge_body(resp.body.strip)
+    questions = parse_ai_json_resp(resp.body.strip)
 
     questions.map do |question|
       TechnicalChallenge.create!(user_id:, job_id: job.id, question: question['question'], tag: params[:tag])
@@ -127,7 +127,7 @@ class AiController < ApplicationController
 
     tech_challenges = TechnicalChallenge
                       .where('user_id = ? AND job_id = ?', user_id, job.id)
-                      .select(:id, :question, :tag)
+                      .select(:id, :job_id, :question, :tag, :ai_hint, :user_solution, :ai_solution)
 
     render json: ApiResponseGenerator.payload_json({ tech_challenges: }), status: :ok
   rescue ActiveRecord::RecordInvalid => e
@@ -176,6 +176,37 @@ class AiController < ApplicationController
     render status: :service_unavailable
   end
 
+  def new_tc_solution
+    user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
+    return render status: :unauthorized if user_id.nil?
+
+    tc = TechnicalChallenge.find(params[:tc_id])
+    render status: :not_found if tc.nil?
+
+    language = params[:language].empty? ? 'javascript' : params[:language]
+
+    req = prepare_ai_request(false, create_tech_final_code_content(tc.question, language))
+
+    resp = Net::HTTP.start(
+      OPENAI_CHAT_COMP_URI.host, OPENAI_CHAT_COMP_URI.port,
+      use_ssl: (OPENAI_CHAT_COMP_URI.scheme = 'https')
+    ) do |http|
+      http.request(req)
+    end
+
+    render status: :service_unavailable unless resp.code == '200'
+
+    ai_solution_json = parse_ai_json_resp(resp.body.strip)
+    puts ai_solution_json
+
+    tc.update!({ ai_solution: ai_solution_json['solution'] })
+
+    render json: ApiResponseGenerator.payload_json(ai_solution_json), status: :ok
+  rescue StandardError => e
+    Rails.logger.error e.message
+    render status: :service_unavailable
+  end
+
   protected
 
   def prepare_ai_request(stream, content)
@@ -200,7 +231,7 @@ class AiController < ApplicationController
     req
   end
 
-  def extract_questions_from_tech_challenge_body(body)
+  def parse_ai_json_resp(body)
     resp_body = JSON.parse(body)
 
     questions = resp_body['choices'][0]['message']['content']
@@ -279,6 +310,22 @@ class AiController < ApplicationController
       KEEP YOUR ANSWER LESS THAN 10000 CHARACTERS.
 
       #{technicall_challenge.question}
+    CONTENT
+  end
+
+  def create_tech_final_code_content(question, language)
+    <<~CONTENT
+      For the programming question below, give me the final correct solution in #{language} programming language.
+      The code MUST be perfectly commented with details.
+
+      YOU MUST ONLY GIVE ME THE CODE IN THE JSON SCHEMA BELOW (No other text or further explanations):
+      {
+        solution: string
+      }
+
+      Question:
+      #{question}
+
     CONTENT
   end
 end
