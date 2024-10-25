@@ -11,6 +11,7 @@ require 'jwt'
 require 'openssl'
 require 'digest'
 require 'pdf-reader'
+require 'fileutils'
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
