@@ -32,6 +32,8 @@ Rails.application.routes.draw do
   get '/ai/tc/hint', to: 'ai#new_tech_challenge_hint'
   get '/ai/tc/solution', to: 'ai#new_tc_solution'
 
+  post '/ai/tc', to: 'ai#new_custom_technical_questions'
+
   # FileSystem
   get '/fs/resume', to: 'fs#show'
   post '/fs/resume', to: 'fs#new'

@@ -10,7 +10,7 @@ class CreateTechnicalChallenges < ActiveRecord::Migration[7.2]
       t.string :ai_solution, limit: 50_000
       t.timestamps
 
-      t.check_constraint "tag IN ('leetcode', 'project')"
+      t.check_constraint "tag IN ('leetcode', 'project', 'custom')"
       t.foreign_key :users, column: :user_id, on_delete: :cascade
       t.foreign_key :jobs, column: :job_id, on_delete: :cascade
     end

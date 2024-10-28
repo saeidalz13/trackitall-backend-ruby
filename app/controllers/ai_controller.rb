@@ -108,7 +108,7 @@ class AiController < ApplicationController
     tag = params[:tag]
     return render status: :bad_request unless %w[leetcode project].include? tag
 
-    req = prepare_ai_request(false, create_technical_question_content(job, tag))
+    req = prepare_ai_request(false, create_technical_question_content(job, tag, ''))
 
     resp = Net::HTTP.start(
       OPENAI_CHAT_COMP_URI.host, OPENAI_CHAT_COMP_URI.port,
@@ -123,6 +123,48 @@ class AiController < ApplicationController
 
     questions.map do |question|
       TechnicalChallenge.create!(user_id:, job_id: job.id, question: question['question'], tag: params[:tag])
+    end
+
+    tech_challenges = TechnicalChallenge
+                      .where('user_id = ? AND job_id = ?', user_id, job.id)
+                      .select(:id, :job_id, :question, :tag, :ai_hint, :user_solution, :ai_solution)
+
+    render json: ApiResponseGenerator.payload_json({ tech_challenges: }), status: :ok
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error e.message
+    render status: :service_unavailable
+  rescue ActiveRecord::RecordNotFound => e
+    Rails.logger.error e.message
+    render status: :not_found
+  rescue StandardError => e
+    Rails.logger.error e.message
+    render status: :service_unavailable
+  end
+
+  def new_custom_technical_questions
+    user_id = get_user_id_from_cookie(cookies[:trackitall_session_id])
+    return render status: :unauthorized if user_id.nil?
+
+    job = Job.find(params[:job_id])
+    render status: :not_found if job.nil?
+
+    tag = params[:tag]
+
+    req = prepare_ai_request(false, create_technical_question_content(job, tag, params[:prompt]))
+
+    resp = Net::HTTP.start(
+      OPENAI_CHAT_COMP_URI.host, OPENAI_CHAT_COMP_URI.port,
+      use_ssl: (OPENAI_CHAT_COMP_URI.scheme = 'https')
+    ) do |http|
+      http.request(req)
+    end
+
+    return render status: :service_unavailable unless resp.code == '200'
+
+    questions = parse_ai_json_resp(resp.body.strip)
+
+    questions.map do |question|
+      TechnicalChallenge.create!(user_id:, job_id: job.id, question: question['question'], tag:)
     end
 
     tech_challenges = TechnicalChallenge
@@ -273,8 +315,8 @@ class AiController < ApplicationController
     CONTENT
   end
 
-  def create_technical_question_content(job, tag)
-    <<~CONTENT
+  def create_technical_question_content(job, tag, prompt)
+    content = <<~CONTENT
       I'm trying to solve some technical challenges for my tech interview.
       Based on the information below about the position and the company, give me 5 programming/coding/technical questions, that would help me
       better prepare for the technical stage.
@@ -300,6 +342,10 @@ class AiController < ApplicationController
       Job Description:
       #{job.description}
     CONTENT
+
+    content += "TAILOR YOUR QUESTIONS TO THIS SPECIFIC PROMPT BELOW:\n#{prompt}" if tag == 'custom'
+
+    content
   end
 
   def create_tech_challenge_hint_content(technicall_challenge)

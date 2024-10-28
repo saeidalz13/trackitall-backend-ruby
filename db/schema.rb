@@ -58,7 +58,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_17_165119) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["user_id", "job_id", "question"], name: "index_technical_challenges_on_user_id_and_job_id_and_question", unique: true
-    t.check_constraint "tag::text = ANY (ARRAY['leetcode'::character varying, 'project'::character varying]::text[])"
+    t.check_constraint "tag::text = ANY (ARRAY['leetcode'::character varying, 'project'::character varying, 'custom'::character varying]::text[])"
   end
 
   create_table "users", id: { type: :string, limit: 26 }, force: :cascade do |t|
