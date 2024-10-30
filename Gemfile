@@ -50,3 +50,5 @@ gem 'pdf-reader'
 gem 'securerandom'
 gem 'uri'
 gem 'whenever', require: false
+
+gem "dockerfile-rails", ">= 1.6", :group => :development

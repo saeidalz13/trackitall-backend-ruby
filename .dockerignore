@@ -40,3 +40,8 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
+
+# Custom
+trackitall_google_id_secret.json
+.docker.env
+.env

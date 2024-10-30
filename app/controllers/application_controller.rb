@@ -49,7 +49,7 @@ class ApplicationController < ActionController::API
   end
 
   def get_valid_session(session_id)
-    session = Session.find(session_id)
+    session = Session.find_by(id: session_id)
     return nil if session.nil?
 
     if session.expires_at < Time.new.to_i
@@ -88,6 +88,11 @@ class ApplicationController < ActionController::API
   end
 
   def generate_session_id_cookie(session_id, cookie_signature)
+    # if Rails.env.production?
+    #   "trackitall_session_id=#{session_id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Max-Age=86400"
+    # else
+    #   "trackitall_session_id=#{session_id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Max-Age=86400"
+    # end
     "trackitall_session_id=#{session_id}.#{cookie_signature}; HttpOnly; SameSite=None; Secure; Max-Age=86400"
   end
 end

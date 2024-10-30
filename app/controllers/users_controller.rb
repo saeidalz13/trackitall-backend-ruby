@@ -4,10 +4,16 @@ class UsersController < ApplicationController
     # oauth2_json_path = ENV["GOOGLE_OAUTH2_INFO_JSON"]
     # outh2_data = JSON.parse(oauth2_json_path)
     # web_data = outh2_data["web"]
+    redirect_uri = if Rails.env.production?
+                     ENV['OAUTH_REDIRECT_URI_PROD']
+                   else
+                     ENV['OAUTH_REDIRECT_URI']
+                   end
+
     auth_server_uri = <<~URI
       #{ENV['OAUTH_GOOGLE_AUTH_URI']}?
       client_id=#{ENV['OAUTH_GOOGLE_CLIENT_ID']}&
-      redirect_uri=#{ENV['OAUTH_REDIRECT_URI']}&
+      redirect_uri=#{redirect_uri}&
       response_type=code&
       state=#{SecureRandom.hex(16)}&
       scope=email
@@ -47,14 +53,26 @@ class UsersController < ApplicationController
   #   - alg
   #   ...
   def google_redirect_oauth2
+    frontend_uri = if Rails.env.production?
+                     ENV['FRONTEND_URI_PROD']
+                   else
+                     ENV['FRONTEND_URI']
+                   end
+
     # Exchange token with the received auth code
     token_exchange_uri = URI(ENV['OAUTH_GOOGLE_TOKEN_EXHANGE_URI'])
+
+    redirect_uri = if Rails.env.production?
+                     ENV['OAUTH_REDIRECT_URI_PROD']
+                   else
+                     ENV['OAUTH_REDIRECT_URI']
+                   end
     token_exchange_uri.query = URI.encode_www_form(
       {
         code: params['code'],
         client_id: ENV['OAUTH_GOOGLE_CLIENT_ID'],
         client_secret: ENV['OAUTH_CLIENT_SECRET'],
-        redirect_uri: ENV['OAUTH_REDIRECT_URI'],
+        redirect_uri:,
         grant_type: 'authorization_code'
       }
     )
@@ -99,7 +117,13 @@ class UsersController < ApplicationController
 
     ActiveRecord::Base.transaction do
       user = User.find_by(email:)
-      user = User.create!(email:, password: BCrypt::Password.create(SecureRandom.hex(20))) if user.nil?
+      if user.nil?
+        user = User.create!(
+          id: ULID.generate,
+          email:,
+          password: BCrypt::Password.create(SecureRandom.hex(20))
+        )
+      end
 
       Session.where(user_id: user.id).delete_all
 
@@ -111,16 +135,21 @@ class UsersController < ApplicationController
       response.set_header('Set-Cookie', generate_session_id_cookie(session.id, cookie_signature))
     end
 
-    redirect_to "#{ENV['FRONTEND_URI']}/profile?auth=true", allow_other_host: true
+    redirect_to "#{frontend_uri}/profile?auth=true", allow_other_host: true
   rescue ActiveRecord::RecordInvalid => e
-    puts "Invalid Record Error: #{e.message}"
-    redirect_to "#{ENV['FRONTEND_URI']}?oauth2_error=#{e.message}", allow_other_host: true
+    Rails.logger.error "Invalid Record Error: #{e.message}"
+    redirect_to "#{frontend_uri}?oauth2_error=failed-to-create-user", allow_other_host: true
   rescue StandardError => e
-    puts "Standard Error: #{e.message}"
-    redirect_to "#{ENV['FRONTEND_URI']}?oauth2_error=#{e.message}", allow_other_host: true
+    Rails.logger.error "Standard Error: #{e.message}"
+    redirect_to "#{frontend_uri}?oauth2_error=something-went-wrong", allow_other_host: true
   end
 
   def signup
+    frontend_uri = if Rails.env.production?
+                     ENV['FRONTEND_URI_PROD']
+                   else
+                     ENV['FRONTEND_URI']
+                   end
     user_params = JSON.parse(request.body.read)
 
     # ! (bang) throws an exception if something went wrong
@@ -136,7 +165,7 @@ class UsersController < ApplicationController
       raise StandardError, 'Failed to create cookie signature' if cookie_signature.nil?
 
       response.set_header('Set-Cookie', generate_session_id_cookie(session.id, cookie_signature))
-      redirect_to "#{ENV['FRONTEND_URI']}/profile?auth=true", allow_other_host: true
+      redirect_to "#{frontend_uri}/profile?auth=true", allow_other_host: true
     end
   rescue JSON::ParserError => e
     puts e.message
