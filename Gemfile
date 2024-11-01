@@ -35,6 +35,8 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem 'rubocop-rails-omakase', require: false
+
+  gem 'graphiql-rails'
 end
 
 gem 'ulid'
@@ -51,4 +53,7 @@ gem 'securerandom'
 gem 'uri'
 gem 'whenever', require: false
 
-gem "dockerfile-rails", ">= 1.6", :group => :development
+gem 'dockerfile-rails', '>= 1.6', group: :development
+gem 'graphql'
+
+gem "sprockets-rails", "~> 3.5"
