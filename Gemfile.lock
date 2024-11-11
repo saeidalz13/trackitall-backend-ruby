@@ -244,7 +244,7 @@ GEM
       rubocop-rails
     ruby-progressbar (1.13.0)
     ruby-rc4 (0.1.5)
-    securerandom (0.3.1)
+    securerandom (0.3.2)
     sprockets (4.2.1)
       concurrent-ruby (~> 1.0)
       rack (>= 2.2.4, < 4)
