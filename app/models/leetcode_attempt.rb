@@ -1,0 +1,2 @@
+class LeetcodeAttempt < ApplicationRecord
+end

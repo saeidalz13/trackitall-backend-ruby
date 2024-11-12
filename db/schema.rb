@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_10_17_165119) do
+ActiveRecord::Schema[7.2].define(version: 2024_11_12_012933) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -39,6 +39,26 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_17_165119) do
     t.index ["company_name"], name: "index_jobs_on_company_name"
     t.index ["position"], name: "index_jobs_on_position"
     t.index ["user_id"], name: "index_jobs_on_user_id"
+  end
+
+  create_table "leetcode_attempts", force: :cascade do |t|
+    t.bigint "leetcode_id", null: false
+    t.boolean "succeed", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["leetcode_id"], name: "index_leetcode_attempts_on_leetcode_id"
+  end
+
+  create_table "leetcodes", force: :cascade do |t|
+    t.string "user_id", limit: 26, null: false
+    t.string "title", limit: 100, null: false
+    t.integer "difficulty", null: false
+    t.string "link", limit: 500
+    t.string "dsa", limit: 100
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.check_constraint "difficulty = ANY (ARRAY[0, 1, 2])"
   end
 
   create_table "sessions", id: { type: :string, limit: 26 }, force: :cascade do |t|
@@ -72,6 +92,8 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_17_165119) do
   add_foreign_key "interview_questions", "jobs", on_delete: :cascade
   add_foreign_key "interview_questions", "users", on_delete: :cascade
   add_foreign_key "jobs", "users", on_delete: :cascade
+  add_foreign_key "leetcode_attempts", "leetcodes"
+  add_foreign_key "leetcodes", "users", on_delete: :cascade
   add_foreign_key "sessions", "users", on_delete: :cascade
   add_foreign_key "technical_challenges", "jobs", on_delete: :cascade
   add_foreign_key "technical_challenges", "users", on_delete: :cascade
