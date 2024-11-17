@@ -58,7 +58,7 @@ class JobController < ApplicationController
     end
 
     job = JsonParser.parse_body(request.body.read)
-    puts job.inspect
+
     if job.nil?
       render json: ApiResponseGenerator.error_json('invalid body'), status: :bad_request
       return
@@ -76,7 +76,6 @@ class JobController < ApplicationController
         ai_insight: nil,
         resume_path: nil
       )
-      puts created_job.inspect
 
       unless InterviewQuestion.add_default_questions(user_id, created_job.id)
         raise ActiveRecord::Rollback, 'Failed to add questions'
