@@ -1,15 +1,15 @@
 class CreateLeetcodes < ActiveRecord::Migration[7.2]
   def change
-    create_table :leetcodes do |t|
-      t.string :user_id, limit: 26, null: false
+    create_table :leetcodes, id: false do |t|
+      t.string :id, primary_key: true
       t.string :title, limit: 100, null: false
-      t.integer :difficulty, null: false
-      t.string :link, limit: 500, null: true
-      t.string :dsa, limit: 100, null: true
+      t.string :difficulty, null: false
+      t.string :link, limit: 500, null: false
+      t.float :acc_rate, null: true
+      t.boolean :paid_only, null: true
       t.timestamps
 
-      t.check_constraint 'difficulty IN (0, 1, 2)'
-      t.foreign_key :users, column: :user_id, on_delete: :cascade
+      t.check_constraint "difficulty IN ('easy', 'medium', 'hard')"
     end
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_11_12_012933) do
+ActiveRecord::Schema[7.2].define(version: 2024_11_19_164410) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -42,23 +42,40 @@ ActiveRecord::Schema[7.2].define(version: 2024_11_12_012933) do
   end
 
   create_table "leetcode_attempts", force: :cascade do |t|
-    t.bigint "leetcode_id", null: false
-    t.boolean "succeed", null: false
-    t.text "notes"
+    t.string "leetcode_id", null: false
+    t.boolean "solved", null: false
+    t.string "notes", limit: 2000
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["leetcode_id"], name: "index_leetcode_attempts_on_leetcode_id"
   end
 
-  create_table "leetcodes", force: :cascade do |t|
-    t.string "user_id", limit: 26, null: false
-    t.string "title", limit: 100, null: false
-    t.integer "difficulty", null: false
-    t.string "link", limit: 500
-    t.string "dsa", limit: 100
+  create_table "leetcode_tags", id: :string, force: :cascade do |t|
+    t.string "tag"
+    t.string "link", limit: 500, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.check_constraint "difficulty = ANY (ARRAY[0, 1, 2])"
+    t.index ["tag"], name: "unique_tags", unique: true
+  end
+
+  create_table "leetcode_with_tags", force: :cascade do |t|
+    t.string "leetcode_id", null: false
+    t.string "leetcode_tag_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["leetcode_id"], name: "index_leetcode_with_tags_on_leetcode_id"
+    t.index ["leetcode_tag_id"], name: "index_leetcode_with_tags_on_leetcode_tag_id"
+  end
+
+  create_table "leetcodes", id: :string, force: :cascade do |t|
+    t.string "title", limit: 100, null: false
+    t.string "difficulty", null: false
+    t.string "link", limit: 500, null: false
+    t.float "acc_rate"
+    t.boolean "paid_only"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.check_constraint "difficulty::text = ANY (ARRAY['easy'::character varying, 'medium'::character varying, 'hard'::character varying]::text[])"
   end
 
   create_table "sessions", id: { type: :string, limit: 26 }, force: :cascade do |t|
@@ -93,7 +110,8 @@ ActiveRecord::Schema[7.2].define(version: 2024_11_12_012933) do
   add_foreign_key "interview_questions", "users", on_delete: :cascade
   add_foreign_key "jobs", "users", on_delete: :cascade
   add_foreign_key "leetcode_attempts", "leetcodes"
-  add_foreign_key "leetcodes", "users", on_delete: :cascade
+  add_foreign_key "leetcode_with_tags", "leetcode_tags"
+  add_foreign_key "leetcode_with_tags", "leetcodes"
   add_foreign_key "sessions", "users", on_delete: :cascade
   add_foreign_key "technical_challenges", "jobs", on_delete: :cascade
   add_foreign_key "technical_challenges", "users", on_delete: :cascade
