@@ -43,6 +43,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_11_19_164410) do
 
   create_table "leetcode_attempts", force: :cascade do |t|
     t.string "leetcode_id", null: false
+    t.string "user_id", limit: 26, null: false
     t.boolean "solved", null: false
     t.string "notes", limit: 2000
     t.datetime "created_at", null: false
@@ -110,6 +111,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_11_19_164410) do
   add_foreign_key "interview_questions", "users", on_delete: :cascade
   add_foreign_key "jobs", "users", on_delete: :cascade
   add_foreign_key "leetcode_attempts", "leetcodes"
+  add_foreign_key "leetcode_attempts", "users", on_delete: :cascade
   add_foreign_key "leetcode_with_tags", "leetcode_tags"
   add_foreign_key "leetcode_with_tags", "leetcodes"
   add_foreign_key "sessions", "users", on_delete: :cascade
