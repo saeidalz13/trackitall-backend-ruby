@@ -42,7 +42,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_11_19_164410) do
   end
 
   create_table "leetcode_attempts", force: :cascade do |t|
-    t.string "leetcode_id", null: false
+    t.integer "leetcode_id", null: false
     t.string "user_id", limit: 26, null: false
     t.boolean "solved", null: false
     t.string "notes", limit: 2000
@@ -60,7 +60,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_11_19_164410) do
   end
 
   create_table "leetcode_with_tags", force: :cascade do |t|
-    t.string "leetcode_id", null: false
+    t.integer "leetcode_id", null: false
     t.string "leetcode_tag_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -68,7 +68,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_11_19_164410) do
     t.index ["leetcode_tag_id"], name: "index_leetcode_with_tags_on_leetcode_tag_id"
   end
 
-  create_table "leetcodes", id: :string, force: :cascade do |t|
+  create_table "leetcodes", id: :serial, force: :cascade do |t|
     t.string "title", limit: 100, null: false
     t.string "difficulty", null: false
     t.string "link", limit: 500, null: false

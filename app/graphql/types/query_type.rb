@@ -34,7 +34,7 @@ module Types
       argument :limit, Integer, required: true, description: 'Limit number for leetcode problems'
       argument :offset, Integer, required: true, description: 'Offset number for leetcode problems'
       argument :difficulty, String, required: true, description: 'Search for difficulty'
-      # argument :search_term, Integer, required: false, description: 'Search in titles of leetcode problems'
+      # argument :search_term, String, required: false, description: 'Search in titles of leetcode problems'
     end
     def leetcodes(limit:, offset:, difficulty:)
       query = Leetcode.limit(limit).offset(offset)
