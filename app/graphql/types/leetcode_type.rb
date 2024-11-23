@@ -10,5 +10,10 @@ module Types
     field :paid_only, Boolean
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+    field :attempts, [Types::LeetcodeAttemptType], null: false
+    def attempts
+      LeetcodeAttempt.where(leetcode_id: object.id).presence || []
+    end
   end
 end
