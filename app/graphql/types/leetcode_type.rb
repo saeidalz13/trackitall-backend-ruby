@@ -15,5 +15,13 @@ module Types
     def attempts
       LeetcodeAttempt.where(leetcode_id: object.id).presence || []
     end
+
+    field :tags, [Types::LeetcodeTagType], null: false
+    def tags
+      lcwt = LeetcodeWithTag.where(leetcode_id: object.id)
+      return [] unless lcwt.exists?
+
+      LeetcodeTag.where(id: lcwt.pluck(:leetcode_tag_id))
+    end
   end
 end
