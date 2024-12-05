@@ -31,11 +31,12 @@ module Types
     end
 
     field :leetcodes, resolver: Resolvers::LeetcodeResolver
-
-    # field :interview_info, [Types::TechnicalChallengeType, Types::InterviewQuestionType] do
-    #   argument :job_id, ID, required: true, description: 'Fetches all behavioral and technical interview questions'
-    # end
-    # def interview_info(job_id:)
-    # end
+    field :recent_leetcodes, resolver: Resolvers::RecentLeetcodeResolver
   end
 end
+
+# field :interview_info, [Types::TechnicalChallengeType, Types::InterviewQuestionType] do
+#   argument :job_id, ID, required: true, description: 'Fetches all behavioral and technical interview questions'
+# end
+# def interview_info(job_id:)
+# end
