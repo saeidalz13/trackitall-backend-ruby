@@ -67,15 +67,16 @@ response = http.request(request)
 
 if response.code != '200'
   puts 'Failed to fetch leetcode from GQL endpoint'
+  return
 else
   puts 'Fetched response, parsing...'
   parsed_body = JSON.parse(response.body)
   questions = parsed_body['data']['problemsetQuestionList']['questions']
 
-  puts 'Deleting previous data...'
-  Leetcode.delete_all
-  LeetcodeTag.delete_all
-  LeetcodeWithTag.delete_all
+  if LeetcodeWithTag.exists?
+    puts 'Seed leetcode data already exists.'
+    return
+  end
 
   leetcode_with_tags_ids = {}
   puts 'Populating leetcodes table...'
@@ -99,7 +100,7 @@ else
         LeetcodeTag.create!(id: t['id'], tag: t['name'].downcase, link: "https://leetcode.com/problem-list/#{t['slug']}")
         puts "Leetcode tag added -> ID: #{t['id']}"
       rescue ActiveRecord::RecordNotUnique, PG::UniqueViolation
-        next
+        break
       rescue StandardError => e
         puts e.message
       end
@@ -112,11 +113,15 @@ else
     break
   end
 
+  return if leetcode_with_tags_ids.empty?
+
   puts 'Populating leetcode_with_tags table...'
   # Populate the leetcode_with_tags table
   leetcode_with_tags_ids.each do |l_id, leetcode_topic_tags|
     leetcode_topic_tags.each do |tt|
       LeetcodeWithTag.create!(leetcode_id: l_id, leetcode_tag_id: tt['id'])
+    rescue ActiveRecord::RecordNotUnique, PG::UniqueViolation, PG::ForeignKeyViolation
+      break
     rescue StandardError => e
       puts e.message
       break
@@ -124,3 +129,6 @@ else
   end
 
 end
+
+# PG::ForeignKeyViolation: ERROR: update or delete on table "leetcodes" violates foreign key constraint
+# "fk_rails_946383d9ec" on table "leetcode_with_tags" (PG::ForeignKeyViolation
