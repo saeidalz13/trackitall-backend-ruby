@@ -1,6 +1,3 @@
-br:
-	bin/rails
-
 # DOCKER
 create_network:
 	docker network create tia_ruby_nw

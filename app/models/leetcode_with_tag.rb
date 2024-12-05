@@ -1,0 +1,2 @@
+class LeetcodeWithTag < ApplicationRecord
+end

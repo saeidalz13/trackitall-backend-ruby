@@ -13,6 +13,8 @@ class GraphqlController < ApplicationController
     context = {
       # Query context goes here, for example:
       # current_user: current_user,
+      cookies:,
+      get_user_id_from_cookie: ->(session_id) { get_user_id_from_cookie(session_id) }
     }
     result = TrackitallRubySchema.execute(query, variables:, context:, operation_name:)
     render json: result

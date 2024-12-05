@@ -22,13 +22,6 @@ module Types
     # Add root-level fields here.
     # They will be entry points for queries on your schema.
 
-    # TODO: remove me
-    field :test_field, String, null: false,
-                               description: 'An example field added by the generator'
-    def test_field
-      'Hello World!'
-    end
-
     # get all the jobs
     field :jobs, [Types::JobType] do
       argument :limit, Integer, required: false, description: 'Limit number of jobs sent'
@@ -37,10 +30,13 @@ module Types
       limit ? Job.limit(limit) : Job.all
     end
 
-    # field :interview_info, [Types::TechnicalChallengeType, Types::InterviewQuestionType] do
-    #   argument :job_id, ID, required: true, description: 'Fetches all behavioral and technical interview questions'
-    # end
-    # def interview_info(job_id:)
-    # end
+    field :leetcodes, resolver: Resolvers::LeetcodeResolver
+    field :recent_leetcodes, resolver: Resolvers::RecentLeetcodeResolver
   end
 end
+
+# field :interview_info, [Types::TechnicalChallengeType, Types::InterviewQuestionType] do
+#   argument :job_id, ID, required: true, description: 'Fetches all behavioral and technical interview questions'
+# end
+# def interview_info(job_id:)
+# end
